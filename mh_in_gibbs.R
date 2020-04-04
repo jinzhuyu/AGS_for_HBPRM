@@ -141,7 +141,6 @@ prop_approx_likeli = function(coeff_curr, coeff_curr_id, hyper_param_curr, ...){
   numerator = hyper_param_curr[1] + 
     hyper_param_curr[2]^2*colSums(y*X_3d[,,coeff_curr_id]*
       (log(y)-prod_part_temp))
-  # To do: change the index since -coeff_curr_id could include multiple values
   
   
   mu_hat = numerator/denominator
@@ -181,7 +180,7 @@ mh_draw = function(coeff_curr, coeff_curr_id, hyper_param_curr, targ_dens_mh, pr
 }
 
 
-mh_gibbs_draw = function(coeff_curr, hyper_param_curr, targ_dens, prop_fun){
+gibbs_with_mh = function(coeff_curr, hyper_param_curr, targ_dens, prop_fun){
   
   
   # update hyperpriors
@@ -206,6 +205,29 @@ mh_gibbs_draw = function(coeff_curr, hyper_param_curr, targ_dens, prop_fun){
 
 
 
+gibbs_no_mh = function(coeff_curr, hyper_param_curr, approx_fun){
+  
+  
+  # update hyperpriors
+  for (i_coeff in 1:n_coeff) {
+    hyper_param_curr[i_coeff, 1] = draw_mu_x(
+      coeff_curr[i_coeff, ], hyper_param_curr[i_coeff, 2])
+    
+    hyper_param_curr[i_coeff, 2] = draw_sigma2_x(
+      coeff_curr[i_coeff, ], hyper_param_curr[i_coeff, 1])
+  }
+  
+  
+  for (i_coeff in 1:n_coeff) {
+    
+    coeff_curr[i_coeff, ] = approx_fun(coeff_curr, i_coeff, hyper_param_curr[i_coeff,])
+  }
+  
+  
+  return(list(coeff_curr, hyper_param_curr))  # can R return a list of matrix?
+}
+
+
 # prop=prop_norm
 # coeff_curr = coeff_temp
 # coeff_curr_id = i_coeff
@@ -219,7 +241,7 @@ mh_gibbs_draw = function(coeff_curr, hyper_param_curr, targ_dens, prop_fun){
 
 a_sigma2_x = a_all + n_group
 
-draw_mu_x = function(x, sigma2_x){
+draw_mu_x = function(x, sigma2_x) {
   # input: x - an array, e.g. vector of alpha_j; sigma2_x: a positive 'number'double'
   # output: a 'double'
   mu_mu_x = tau2_all*sum(x)/(n_group*tau2_all+sigma2_x)
@@ -227,7 +249,7 @@ draw_mu_x = function(x, sigma2_x){
   return(rnorm(1, mu_mu_x, sqrt(sigma2_mu_x)))
 }
 
-draw_sigma2_x = function(x, mu_x){
+draw_sigma2_x = function(x, mu_x) {
   b_sigma2_x = b_all+sum((x-mu_x)^2)/2
   # note that invgamma pdf is defined over the support x > 0
   return(rinvgamma(1, a_sigma2_x, b_sigma2_x))
@@ -252,7 +274,7 @@ draw_sigma2_x = function(x, mu_x){
 # 2. Approximate the likelihood only with a normal distribution. Used as the proposal dist.
 # 3. Approximate product of normal variables with a normal distribution. Used as the proposal dist.
 
-log_post_orig = function(coeff_curr, coeff_curr_id, hyper_param_curr){
+log_post_orig = function(coeff_curr, coeff_curr_id, hyper_param_curr) {
   # prior: p(beta_j|mu_beta, sigma_beta)
   # output: a vector of conditional posterior of each indiv coeff, e.g. p(beta_j|rest)
   
@@ -367,7 +389,7 @@ for ( i_meth in 1:n_meth) {
         cat('\n', i_samp)
       }
       
-      coeff_hyper_param_return = mh_gibbs_draw(
+      coeff_hyper_param_return = gibbs_with_mh(
         coeff[, i_samp-1, , i_chain, i_meth], hyper_param[, i_samp-1, , i_chain, i_meth],
         log_post_orig, dens_fun_list[[i_meth]])
       
