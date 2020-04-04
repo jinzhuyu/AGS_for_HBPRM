@@ -19,7 +19,7 @@ set.seed(10)
 setwd('C:/GitHub/approx_gibbs_for_HBM')
 
 # load data
-data_all_0 = read.csv("C:/GitHub/approx_gibbs_for_HBM/hours_peopleRegainPower_grouped.csv", header = F)
+data_all_0 = read.csv("C:/GitHub/approx_gibbs_for_HBM/power_recovery_data.csv", header = F)
 
 data_all = as.matrix(data_all_0)
 

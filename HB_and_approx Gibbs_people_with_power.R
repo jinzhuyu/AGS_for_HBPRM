@@ -12,7 +12,7 @@ library('invgamma')
 setwd('C:/GitHub/approx_gibbs_for_HBM')
 
 # load data
-data_all_0 = read.csv("C:/GitHub/approx_gibbs_for_HBM/hours_peopleRegainPower_grouped.csv", header = F)
+data_all_0 = read.csv("C:/GitHub/approx_gibbs_for_HBM/power_recovery_data.csv", header = F)
 
 data_all=as.matrix(data_all_0)
 
@@ -36,48 +36,65 @@ set.seed(1)
 
 train=1:(nrow(Y_mat)-2)
 
-HB_data=list(Y=Y_mat[train,],I=(nrow(Y_mat)-2),J=n_group,x1=time_mat[train,],x2=intensity)
+# HB_data=list(Y=Y_mat[train,],I=(nrow(Y_mat)-2),J=n_group,x1=time_mat[train,],x2=intensity)
 # ,
              # I_new=2,J_new=n_group,
              # x1_new=time_mat[-train,])#,x2_new=intensity)
 
-Y_vec=array(as.numeric(unlist(Y_mat[train,])))
-time_vec=array(as.numeric(unlist(time_mat[train,]))) # careful here
-intensity_vec=rep(array(as.numeric(unlist(intensity))),each=length(train))
-intensity_vec1=round(intensity_vec/1000,0)
+Y_vec = array(as.numeric(unlist(Y_mat[train,])))
+time_vec = array(as.numeric(unlist(time_mat[train,])))
+intensity_vec = rep(array(as.numeric(unlist(intensity))),each=length(train))/1000
+
 index_group_vec = rep(1:n_group,each=length(train))
 len_vec = length(Y_vec)
 
-X_vec = rbind(time_vec, index_group_vec)
+X_vec = rbind(time_vec, intensity_vec)
 
-HB_data_1d = list(Y,I=length(train),J=n_group,N=length(train)*n_group,
-                  X = X_vec,index_group=index_group_vec,K=ncol(X_vec))
+HB_data_1d = list(Y = Y_vec, I=length(train), J=n_group, N=length(train)*n_group,
+                  X = X_vec, group_id=index_group_vec, K=nrow(X_vec))
+# time = time_vec, intensity = intensity_vec
 
 # glm_fit = glm(Y_vec~time_vec+intensity_vec1, family = "poisson")
 # summary(glm_fit)
 
-n_sam = 10000
+n_sam = 12000
 n_warmup = round(n_sam/3,0)
 n_chain = 4
 
-HBR_1d_fit=stan(file='1d_HBR_stan.stan',data = HB_data_1d,iter =(n_sam+n_warmup), warmup=n_warmup,
-                chains = n_chain)#, control = list(adapt_delta = 0.95, max_treedepth = 20))
+HBR_1d_fit=stan(file='1d_HBM_multi_attri.stan',data = HB_data_1d,iter =(n_sam+n_warmup), warmup=n_warmup,
+                chains = n_chain)#, control = list(adapt_delta = 0.85, max_treedepth = 15))
 
-print(HBR_1d_fit,pars=c('beta','gamma'))   # gamma converge well with 10000 samplers and 2000 warm-ups
-rstan::traceplot(HBR_1d_fit,pars=c('beta','gamma'))
+rstan::traceplot(HBR_1d_fit, pars='coeff')
+print(HBR_1d_fit, pars='coeff')
+
+rstan::traceplot(HBR_1d_fit, pars=c('mu','sigma2'))
+print(HBR_1d_fit, pars=c('mu','sigma2'))
+
+
+# print(HBR_1d_fit, pars=c('beta','gamma'))
+# rstan::traceplot(HBR_1d_fit, pars=c('beta','gamma'))
+
 
 # trace_beta1=rstan::traceplot(HBR_1d_fit,pars=c('beta'))
 # trace_beta1+ scale_color_discrete() + theme(legend.position = c(0.85, 0.17)) # shows up clearly when zoomed in
 # trace_alpha1+ theme(legend.position = c(0.85, 0.2))
 # rstan::traceplot(HBR_1d_fit,pars=c('alpha'))
 # rstan::traceplot(HBR_1d_fit,pars=c('beta'))
-rstan::traceplot(HBR_1d_fit,pars=c('gamma'))
+# rstan::traceplot(HBR_1d_fit,pars=c('gamma'))
 
 # }
 
 # extract posteriors
 
 HBR_fit=extract(HBR_1d_fit, permuted = TRUE)
+
+
+# sampler diagnostics
+# ref.: https://cran.r-project.org/web/packages/rstan/vignettes/stanfit-objects.html
+
+sampler_params <- get_sampler_params(HBR_1d_fit, inc_warmup = FALSE)
+mean_accept_stat_by_chain <- sapply(sampler_params, function(x) mean(x[, "accept_stat__"]))
+print(mean_accept_stat_by_chain)
 
 # convergence diagonostics
 # https://rdrr.io/cran/rstan/man/Rhat.html
@@ -91,8 +108,10 @@ HBR_fit=extract(HBR_1d_fit, permuted = TRUE)
 # Rhat(HBR_1d_fit)
 
 ### excecution time
-time_Stan=sum(get_elapsed_time(HBR_1d_fit))
-cat('Excecution time with Stan: ',time_Stan)
+time_stan = get_elapsed_time(HBR_1d_fit)
+time_stan_total = sum(time_stan[,2])
+cat('Time for each chain of samples with Stan: ', time_stan[,2])
+cat('Total time for 4 chain of samples with Stan: ', time_stan_total)
 
 ### effective sample size
 # summary(HBR_1d_fit)$summary[, "n_eff"]
@@ -109,7 +128,7 @@ cat('Excecution time with Stan: ',time_Stan)
 # plot credible intervals for the different betas
 # plot(HBR_1d_fit,pars=c("alpha"))
 
-trance_plot=plot(HBR_1d_fit, plotfun = "trace", pars = c('beta'), inc_warmup = TRUE)
+trance_plot=plot(HBR_1d_fit, plotfun = "trace", pars = c('coeff'), inc_warmup = TRUE)
 trance_plot + scale_color_discrete() + theme(legend.position = "top")
 
 #### fitted curves
@@ -345,16 +364,17 @@ rowMeans(colMeans(beta_mat_good))
 rowMeans(colMeans(gamma_mat_good))
 
 
-print(HBR_1d_fit,pars=c('beta','gamma'))
+print(HBR_1d_fit,pars=c('coeff'))
 
 plot_colors = c('blue','red', 'pink', "orange")
 legend_names = c('1','2', '3', '4')
-plot_post = function(coeff_curr_3d, coeff_name){
+plot_post_coeff = function(coeff_curr_3d, coeff_name){
   par(mfrow=c(2, ceiling(n_group/2)))
   for (ii in 1:n_group){
     for(i_chain in 1:n_chain){
       if (i_chain==1){
-        plot(index_good, coeff_curr_3d[index_good,ii,i_chain], type='l', xlab='', ylab='', main=paste(coeff_name,ii), col=plot_colors[i_chain])
+        plot(index_good, coeff_curr_3d[index_good,ii,i_chain], type='l', xlab='', ylab='',
+             main=paste(coeff_name,ii), col=plot_colors[i_chain])
       } else{
         lines(index_good, coeff_curr_3d[index_good,ii,i_chain], col=plot_colors[i_chain])
       }
@@ -364,16 +384,35 @@ plot_post = function(coeff_curr_3d, coeff_name){
 }
 # improve legend: https://datascienceplus.com/mastering-r-plot-part-3-outer-margins/
 
-
 # par(mfrow=c(2,3))
     # oma = c(4,3,0,0) + 2,# two rows of text at the outer left and bottom margin
     # mar = rep(2,4) + 2) # space for one row of text at ticks and to separate plots
 ### trace plot
 
+plot_post_hyper = function(hyper_param_curr, hyper_param_name){
+  par(mfrow=c(2, ceiling(n_coeff/2)))
+  for (ii in 1:n_coeff){
+    for(i_chain in 1:n_chain){
+      if (i_chain==1){
+        plot(index_good, hyper_param_curr[index_good,ii,i_chain], type='l', xlab='', ylab='',
+             main=paste(hyper_param_name,ii), col=plot_colors[i_chain])
+      } else{
+        lines(index_good, hyper_param_curr[index_good,ii,i_chain], col=plot_colors[i_chain])
+      }
+    }
+  }
+  legend("bottom", legend=legend_names, col=plot_colors, lwd=1.0, cex=1.0, bty='n',
+         xpd = NA, horiz = T, inset = c(0,-0.5))
+}
+
+
 # coeff_nam = c('beta ', 'gamma ')
 
-plot_post(beta_mat, 'beta ')
-plot_post(gamma_mat, 'gamma ')
+plot_post_coeff(beta_mat, 'beta ')
+plot_post_coeff(gamma_mat, 'gamma ')
+
+plot_post_hyper(mu, 'mu')
+plot_post_hyper(sigma2, 'sigma')
 
 
 # # sigma2
