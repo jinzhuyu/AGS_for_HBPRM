@@ -125,32 +125,25 @@ prop_norm = function(coeff_curr, coeff_curr_id, hyper_param_curr, ...){
 
 
 # the prop_normal does not depende on other coeff and hyper params
+
 prop_approx_likeli = function(coeff_curr, coeff_curr_id, hyper_param_curr, ...){
-  # hyper param curr: a vector
-  
-  denominator = hyper_param_curr[2]^2*colSums(y*X_3d[,,coeff_curr_id]^2) + 1
+  # hyper param curr: a vector of mu and sigma2
   
   # coeff_curr = coeff #coeff[,ii,]
   coeff_curr_rep = apply(coeff_curr, 1, function(x) rep_row(x, n_point_each))
   coeff_curr_3d = array(as.vector(coeff_curr_rep), dim = c(n_point_each, n_group, n_coeff))
-  
-  prod_part_temp = rowSums(coeff_curr_3d*X_3d, dim=2)-
-    rep_row(coeff_curr[coeff_curr_id, ], n_point_each)*X_3d[coeff_curr_id,,coeff_curr_id]
-  
-  
+  prod_part_temp = rowSums(coeff_curr_3d*X_3d, dim=2) -
+    rep_row(coeff_curr[coeff_curr_id, ], n_point_each)*X_3d[,,coeff_curr_id]
   numerator = hyper_param_curr[1] + 
-    hyper_param_curr[2]^2*colSums(y*X_3d[,,coeff_curr_id]*
-      (log(y)-prod_part_temp))
+    hyper_param_curr[2]*colSums(y*X_3d[,,coeff_curr_id]*(log(y)-prod_part_temp))
   
+  denominator = hyper_param_curr[2]*colSums(y*X_3d[,,coeff_curr_id]^2) + 1
   
   mu_hat = numerator/denominator
   
-  simga_hat = sqrt(hyper_param_curr[2]^2/denominator)
+  simga_hat = sqrt(hyper_param_curr[2]/denominator)
   
-  coeff_curr_new_1d = coeff_curr[coeff_curr_id, ]
-  for (jj in 1:n_group) {
-  coeff_curr_new_1d[jj] = rnorm(1, mean=mu_hat[jj], sd=simga_hat[jj])
-  }
+  coeff_curr_new_1d = rnorm(n_group, mean=mu_hat, sd=simga_hat)
   
   return(coeff_curr_new_1d)
 }
@@ -194,19 +187,16 @@ gibbs_with_mh = function(coeff_curr, hyper_param_curr, targ_dens, prop_fun){
   
   
   for (i_coeff in 1:n_coeff){
-    
     coeff_curr = mh_draw(coeff_curr, i_coeff, hyper_param_curr[i_coeff,],
                          targ_dens_mh = targ_dens,  prop_mh = prop_fun)
   }
   
-  
-  return(list(coeff_curr, hyper_param_curr))  # can R return a list of matrix?
+  return(list(coeff_curr, hyper_param_curr))
 }
 
 
 
-gibbs_no_mh = function(coeff_curr, hyper_param_curr, approx_fun){
-  
+gibbs_without_mh = function(coeff_curr, hyper_param_curr, approx_fun = prop_approx_likeli){
   
   # update hyperpriors
   for (i_coeff in 1:n_coeff) {
@@ -219,12 +209,10 @@ gibbs_no_mh = function(coeff_curr, hyper_param_curr, approx_fun){
   
   
   for (i_coeff in 1:n_coeff) {
-    
     coeff_curr[i_coeff, ] = approx_fun(coeff_curr, i_coeff, hyper_param_curr[i_coeff,])
   }
   
-  
-  return(list(coeff_curr, hyper_param_curr))  # can R return a list of matrix?
+  return(list(coeff_curr, hyper_param_curr))
 }
 
 
@@ -257,23 +245,6 @@ draw_sigma2_x = function(x, mu_x) {
 
 # regression coefficients
 
-
-# conditional posterior for invididual-level parameters, beta_Approximate normal
-# beta_approx = function(alpha, gamma, mu_beta, sigma2_beta){
-#   mu_beta_hat = (mu_beta+sigma2_beta*colSums(y_mat_gibbs*time_gibbs_mat*
-#                                                (log(y_mat_gibbs)-rep_row(alpha,n_row_train)-rep_row(gamma*intensity_gibbs,n_row_train))))/
-#     (sigma2_beta*sum_y_time2+1)
-#   sigma2_beta_hat = 1/(sum_y_time2+1/sigma2_beta)
-#   return(rnorm(n_group, mu_beta_hat, sqrt(sigma2_beta_hat)))
-# }
-
-# combine the attributes
-
-# conditional joint posterior for alpha and gamma. 
-# 1. Origninal complex distribution. Target distribution. mvnorm will be adopted as proposal dist.
-# 2. Approximate the likelihood only with a normal distribution. Used as the proposal dist.
-# 3. Approximate product of normal variables with a normal distribution. Used as the proposal dist.
-
 log_post_orig = function(coeff_curr, coeff_curr_id, hyper_param_curr) {
   # prior: p(beta_j|mu_beta, sigma_beta)
   # output: a vector of conditional posterior of each indiv coeff, e.g. p(beta_j|rest)
@@ -298,27 +269,6 @@ log_post_orig = function(coeff_curr, coeff_curr_id, hyper_param_curr) {
   
   return(log_post)
 }
-
-
-
-# change the log dens group orig into a single function with coeff and hyper_param as inputs
-
-# log_dens_group_approx_likeli =function(log_lambda_curr){
-#   log_lambda_j = rowSums(log_lambda_curr)
-#   log_joint_approx_likeli = sum(mapply(function(log_lambda,y) dnorm(log_lambda,log(y),sqrt(1/y)),
-#                                        log_lambda_j, y_j))
-#   log_joint_post_approx_likeli = log(prior_group_coeff_curr) + log_joint_approx_likeli
-#   return(log_joint_post_approx_likeli)
-# }
-# 
-# log_dens_group_approx_product_norm = function(coeff, mu, sigma,){
-#   log_lambda_j = rowSums(log_lambda_curr) # alpha_j*1 + betaj*t_ij + gammaj*I_j
-#   approx_product_norm = prod(coeff_group, log_lambda_j) # product of the group-level parameters alpha*gamma
-#   mu_approx_product_norm = prod(mu,log(y_j))
-#   var_approx_product_norm = prod(mu + sigma^2, log(y_j)^2 + 1/y_j) - mu_approx_product_norm^2
-#   log_dens_approx_product_norm = dnorm(approx_product_norm, mu_approx_product_norm,
-#                                        var_approx_product_norm, log = T)
-# }
 
 
 
@@ -356,9 +306,8 @@ b_all = 2
 a_sigma2_x = a_all + n_group
 
 
-# for (i_chain in 1:n_chain){
-
-meth_name = c('Original conditional','Conditional using approx. likelihood')
+# meth_name = c('Original conditional','Conditional using approx. likelihood')
+meth_name = c('Gibbs without MH step, with approx. likelihood')
 
 dens_fun_list = c(prop_norm) #, prop_approx_likeli)
 n_meth = length(dens_fun_list)
@@ -382,35 +331,35 @@ for ( i_meth in 1:n_meth) {
     # initialization
     hyper_param[, 1, , i_chain, i_meth] = array(abs(rnorm(1, 1, 1/2)), dim = c(n_coeff, n_hyper_param))
     coeff[, 1, , i_chain, i_meth] = array(rnorm(1, 0.001, 0.001/2), dim = c(n_coeff, n_group))
-    accept_count = array(0, dim = c(n_coeff, n_group))
+    # accept_count = array(0, dim = c(n_coeff, n_group))
     
     for (i_samp in 2:n_sample){
       if (i_samp%%1000==0){
         cat('\n', i_samp)
       }
       
-      coeff_hyper_param_return = gibbs_with_mh(
-        coeff[, i_samp-1, , i_chain, i_meth], hyper_param[, i_samp-1, , i_chain, i_meth],
-        log_post_orig, dens_fun_list[[i_meth]])
+      # coeff_hyper_param_return = gibbs_with_mh(
+      #   coeff[, i_samp-1, , i_chain, i_meth], hyper_param[, i_samp-1, , i_chain, i_meth],
+      #   log_post_orig, dens_fun_list[[i_meth]])
+      
+      coeff_hyper_param_return = gibbs_without_mh(
+        coeff[, i_samp-1, , i_chain, i_meth], hyper_param[, i_samp-1, , i_chain, i_meth])
       
       coeff[, i_samp, , i_chain, i_meth] = as.matrix(coeff_hyper_param_return[[1]])
       
       hyper_param[, i_samp, , i_chain, i_meth] = as.matrix(coeff_hyper_param_return[[2]])
     }
     
-    accept_count_all[,,i_chain, i_meth] = accept_count
+    # accept_count_all[,,i_chain, i_meth] = accept_count
     
   }
 
   t_end = Sys.time()
   
-  
   t_run[i_meth] = t_end - t_start 
 }
 
-
-cat('Excecution time using Gibbs sampler: ', t_run)
-
+cat('Excecution time with 4 chains:\n', t_run, 'mins.')
 
 ################################################################################
 ##### 3 - Summarize and visualize posterior distributions 
@@ -418,7 +367,7 @@ cat('Excecution time using Gibbs sampler: ', t_run)
 
 plot_colors = c('blue','red', 'pink', "orange")
 legend_names = sapply(1:n_chain, toString)
-index_good = (20000):n_sample
+index_good = (n_keep*2/3):n_sample
 # if(max(coeff)<=1e-4){
 #   axis(2,at=marks,labels=format(marks,scientific=T))
 # }
@@ -543,4 +492,5 @@ cat('Poisson regression:\n', glm_fit$coefficients)
 # cache in MH to boost the efficiency
 # ref.: https://www.cra.com/Figaro_ScalaDoc/com/cra/figaro/library/cache/MHCache.html/
 #     : https://stablemarkets.wordpress.com/2019/03/02/efficient-mcmc-with-caching/  
-#     : https://theoreticalecology.wordpress.com/2010/09/17/metropolis-hastings-mcmc-in-r/
+    # : https://theoreticalecology.wordpress.com/2010/09/17/metropolis-hastings-mcmc-in-r/https://people.eecs.berkeley.edu/~jordan/sail/readings/andrieu-thoms.pdf
+
