@@ -306,8 +306,9 @@ b_all = 2
 a_sigma2_x = a_all + n_group
 
 
-# meth_name = c('Original conditional','Conditional using approx. likelihood')
-meth_name = c('Gibbs without MH step, with approx. likelihood')
+# meth_name = c('MH in Gibbs, original conditional','MH in Gibbs, approximate conditional')
+meth_name = c('MH in Gibbs, approximate conditional')
+# meth_name = c('Gibbs, approximate conditional')
 
 dens_fun_list = c(prop_norm) #, prop_approx_likeli)
 n_meth = length(dens_fun_list)
@@ -323,7 +324,7 @@ t_run = array(0, dim = c(n_meth))
 
 for ( i_meth in 1:n_meth) {
   
-  t_start  = Sys.time()
+  # t_start  = Sys.time()
 
   for (i_chain in 1:n_chain){
     cat('\n\n\nChain: ', i_chain)
@@ -338,28 +339,29 @@ for ( i_meth in 1:n_meth) {
         cat('\n', i_samp)
       }
       
-      # coeff_hyper_param_return = gibbs_with_mh(
-      #   coeff[, i_samp-1, , i_chain, i_meth], hyper_param[, i_samp-1, , i_chain, i_meth],
-      #   log_post_orig, dens_fun_list[[i_meth]])
+      coeff_hyper_param_return = gibbs_with_mh(
+        coeff[, i_samp-1, , i_chain, i_meth], hyper_param[, i_samp-1, , i_chain, i_meth],
+        log_post_orig, dens_fun_list[[i_meth]])
       
-      coeff_hyper_param_return = gibbs_without_mh(
-        coeff[, i_samp-1, , i_chain, i_meth], hyper_param[, i_samp-1, , i_chain, i_meth])
+      # coeff_hyper_param_return = gibbs_without_mh(
+      #   coeff[, i_samp-1, , i_chain, i_meth], hyper_param[, i_samp-1, , i_chain, i_meth])
       
       coeff[, i_samp, , i_chain, i_meth] = as.matrix(coeff_hyper_param_return[[1]])
       
       hyper_param[, i_samp, , i_chain, i_meth] = as.matrix(coeff_hyper_param_return[[2]])
     }
     
-    # accept_count_all[,,i_chain, i_meth] = accept_count
+    accept_count_all[,,i_chain, i_meth] = accept_count
     
   }
 
   t_end = Sys.time()
   
-  t_run[i_meth] = t_end - t_start 
+  t_run[i_meth] = as.numeric(as.POSIXct(t_end)-as.POSIXct(t_start ), units="secs")
 }
 
-cat('Excecution time with 4 chains:\n', t_run, 'mins.')
+cat('Excecution time with 4 chains:\n', t_run, 'secs.')
+
 
 ################################################################################
 ##### 3 - Summarize and visualize posterior distributions 
@@ -379,10 +381,10 @@ plot_sample = function(coeff, coeff_name) {
         for(i_chain in 1:n_chain){
           if (i_chain==1){
             plot(index_good, coeff[i_coeff, index_good, i_group,i_chain, i_meth], type='l',
-                 xlab=paste(coeff_name[i_coeff],i_group), ylab='', col=plot_colors[i_chain])
+                 ylab=paste(coeff_name[i_coeff],i_group), xlab='', col=plot_colors[i_chain])
           } else{
             lines(index_good, coeff[i_coeff, index_good, i_group,i_chain, i_meth],
-                  xlab=paste(coeff_name[i_coeff],i_group), col=plot_colors[i_chain])
+                  ylab=paste(coeff_name[i_coeff],i_group), xlab= '', col=plot_colors[i_chain])
           }
         }
       }
@@ -392,30 +394,32 @@ plot_sample = function(coeff, coeff_name) {
   }
 }
 
-plot_density = function(coeff, coeff_name) {
-  for (i_meth in 1:n_meth) {
-    for (i_coeff in 1:length(coeff_name)){
-      par(mfrow=c(2, ceiling(n_group/2)))
-      for (i_group in 1:n_group){
-        for(i_chain in 1:n_chain){
-          if (i_chain==1){
-            plot(density(coeff[i_coeff, index_good, i_group,i_chain, i_meth]), type='l', main = '',
-                 xlab=paste(coeff_name[i_coeff],i_group), ylab='Density', col=plot_colors[i_chain])
-          } else{
-            lines(density(coeff[i_coeff, index_good, i_group,i_chain, i_meth]), main = '',
-                  xlab=paste(coeff_name[i_coeff],i_group), ylab='Density', col=plot_colors[i_chain])
-          }
-        }
-      }
-      legend("bottom", legend=legend_names, col=plot_colors, lwd=1.0, 
-             cex=1.0, bty='n', xpd = NA, horiz = T, inset = c(0,-0.5)) 
-    }
-  }
-}
-
 coeff_name = c('beta ','gamma ')
 plot_sample(coeff, coeff_name)
-plot_density(coeff, coeff_name)
+
+# plot_density = function(coeff, coeff_name) {
+#   for (i_meth in 1:n_meth) {
+#     for (i_coeff in 1:length(coeff_name)){
+#       par(mfrow=c(2, ceiling(n_group/2)))
+#       for (i_group in 1:n_group){
+#         for(i_chain in 1:n_chain){
+#           if (i_chain==1){
+#             plot(density(coeff[i_coeff, index_good, i_group,i_chain, i_meth]), type='l', main = '',
+#                  xlab=paste(coeff_name[i_coeff],i_group), ylab='Density', col=plot_colors[i_chain])
+#           } else{
+#             lines(density(coeff[i_coeff, index_good, i_group,i_chain, i_meth]), main = '',
+#                   xlab=paste(coeff_name[i_coeff],i_group), ylab='Density', col=plot_colors[i_chain])
+#           }
+#         }
+#       }
+#       legend("bottom", legend=legend_names, col=plot_colors, lwd=1.0, 
+#              cex=1.0, bty='n', xpd = NA, horiz = T, inset = c(0,-0.5)) 
+#     }
+#   }
+# }
+# 
+
+# plot_density(coeff, coeff_name)
 
 
 for (i_meth in 1:n_meth){
@@ -440,15 +444,27 @@ cat('Poisson regression:\n', glm_fit$coefficients)
 
 
 
-# hyper_param_name = c('mu','sigma')
-# for (jj in 1:length(hyper_param_name)){
-#   par(mfrow=c(ceiling(n_coeff/2),2))
-#   for (ii in 1:n_coeff){
-#     plot(hyper_param[ii, (n_warm_up+1):n_sample, jj], ylab = paste(hyper_param_name[jj], ii))
-#   }
-#   # mtext(0.5,0.55,paste('Posterior of', hyper_param_name[jj]), outer=TRUE,  cex=1, line=-0.5)
-#   print(mean(hyper_param[, (n_warm_up+1):n_sample, jj]))
-# }
+hyper_param_name = c('mu','sigma')
+for (i_meth in 1:n_meth){
+  for (jj in 1:length(hyper_param_name)){
+    par(mfrow=c(ceiling(n_coeff/2),2))
+    for (i_coeff in 1:n_coeff){
+      for(i_chain in 1:n_chain){
+        if (i_chain==1){
+          plot(index_good, hyper_param[i_coeff, index_good, jj, i_chain, i_meth],
+               ylab = paste(hyper_param_name[jj], i_coeff), xlab='', col=plot_colors[i_chain])
+        } else {
+          lines(index_good, hyper_param[i_coeff, index_good, jj, i_chain, i_meth],
+                ylab = paste(hyper_param_name[jj], i_coeff), xlab='', col=plot_colors[i_chain])
+        }
+      }
+    # mtext(0.5,0.55,paste('Posterior of', hyper_param_name[jj]), outer=TRUE,  cex=1, line=-0.5)
+    # print(mean(hyper_param[, index_good, jj, , i_meth]))
+    }
+    legend("bottom", legend=legend_names, col=plot_colors, lwd=1.0, 
+           cex=1.0, bty='n', xpd =NA, horiz=T, inset=c(0,-0.5)) 
+  }
+}
 
 # change sequence of coeff. Checked. Same results.
 # check post of hyper parameters
