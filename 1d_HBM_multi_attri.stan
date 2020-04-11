@@ -1,26 +1,26 @@
 
 data {
-  int<lower=1> I;            // number of points in each group
-  int<lower=1> J;            // number of groups
-  int<lower=1> K;            // number of coefficients 
-  int<lower=1> N;
-  int<lower=1> Y[N];         // count outcome    
-  real<lower=1> X[K,N];      // attribute matrix 
-  int<lower=1> group_id[N]; 
+  // int<lower=1> I;            // number of points in each group
+  int<lower=1> N_group;            // number of groups
+  int<lower=1> N_coeff;            // number of coefficients 
+  int<lower=1> N_data;
+  int<lower=1> Y[N_data];         // count outcome    
+  real<lower=1> X[N_coeff, N_data];      // attribute matrix 
+  int<lower=1> group_id[N_data]; 
 }
 
 
 parameters {
-  real coeff[K, J];           
-  real mu[K];
-  real<lower=0> sigma2[K];
+  real coeff[N_coeff, N_group];           
+  real mu[N_coeff];
+  real<lower=0> sigma2[N_coeff];
 }
 
 
 
 transformed parameters {
-  real log_lambda[N];
-  for (i in 1:N) {
+  real log_lambda[N_data];
+  for (i in 1:N_data) {
     log_lambda[i] = dot_product(coeff[, group_id[i]], X[, i]);
   }
 }
@@ -32,7 +32,7 @@ model {
   target += normal_lpdf(mu|0,2);
   target += inv_gamma_lpdf(sigma2|1,1);
   
-  for (k in 1:K) {
+  for (k in 1:N_coeff) {
    target += normal_lpdf(coeff[k,]|mu[k], sqrt(sigma2[k]));
   }
   
@@ -40,8 +40,8 @@ model {
 }
 
 //generated quantities {
-// real <lower=1> y_hat[I_new*J_new];
-//  for (ij in 1:(I_new*J_new)) {
+// real <lower=1> y_hat[I_new*N_group_new];
+//  for (ij in 1:(I_new*N_group_new)) {
 //    yhat[ij] = ;
 //  }
 //}
