@@ -7,7 +7,6 @@ library('mcmcse')    # ess function
 # functions to generate plots
 
 # calculate effective sample size
-
 cal_rho = function(m, n, phi, t, var_phi_hat){
   
   # calculate variogram at each lag t, denoted by V_t
@@ -303,33 +302,6 @@ plot_time = function(x, y, x_lab, y_lab){
 }
 
 
-# ###############################
-# # load data
-# data_all=read.csv('C:/Users/Administrator/Desktop/performance_comparison_Stan_Gibbs.csv',header = T)
-# n_total_points = data_all$n_total
-# n_coeff = data_all$n_coeff
-# time_stan = data_all$t_s
-# time_gibbs = data_all$t_a
-# eff_stan = data_all$e_s
-# eff_gibbs = data_all$e_a
-# 
-# 
-# 
-# ###############################
-# x_lab = c('Total number of points', 'Total number of coefficients')
-# y_lab = c(expression(bold("Time per"~10^{3}~"iterations (s)")), 'Efficiency (/s)')
-# 
-# # plot execution time
-# plot_time(n_total_points, time_stan, x_lab[1], y_lab[1])
-# plot_time(n_coeff, time_gibbs, x_lab[2], y_lab[1])
-# 
-# # plot effeciency
-# plot_eff(n_total_points, eff_stan, x_lab[1], y_lab[2])
-# plot_eff(n_coeff, eff_gibbs, x_lab[2], y_lab[2])
-
-
-
-
 ################################################################################
 ##### 3 - Summarize and visualize posterior distributions 
 ################################################################################
@@ -363,74 +335,26 @@ plot_sample = function(coeff, coeff_name) {
   }
 }
 
-coeff_name = c('beta ','gamma ')
-plot_sample(coeff_gibbs, coeff_name)
 
-# plot_density = function(coeff, coeff_name) {
-#   for (i_meth in 1:n_meth) {
-#     for (i_coeff in 1:length(coeff_name)){
-#       par(mfrow=c(2, ceiling(n_group/2)))
-#       for (i_group in 1:n_group){
-#         for(i_chain in 1:n_chain){
-#           if (i_chain==1){
-#             plot(density(coeff[i_coeff, index_good, i_group,i_chain, i_meth]), type='l', main = '',
-#                  xlab=paste(coeff_name[i_coeff],i_group), ylab='Density', col=plot_colors[i_chain])
-#           } else{
-#             lines(density(coeff[i_coeff, index_good, i_group,i_chain, i_meth]), main = '',
-#                   xlab=paste(coeff_name[i_coeff],i_group), ylab='Density', col=plot_colors[i_chain])
-#           }
-#         }
-#       }
-#       legend("bottom", legend=legend_names, col=plot_colors, lwd=1.0,
-#              cex=1.0, bty='n', xpd = NA, horiz = T, inset = c(0,-0.5))
-#     }
-#   }
-# }
-#
-
-# plot_density(coeff, coeff_name)
-# 
-# 
-for (i_meth in 1:n_meth){
-  for (i_coeff in 1:n_coeff) {
-    cat('\nAcceptance rate of', paste(coeff_name[i_coeff]), ':',
-        rowSums(round(accept_count_all[i_coeff, , ,i_meth]/(n_chain*n_total_sample), 3)))
-  }
-}
-
-# 
-mean_gibbs = array(NA, dim = c(n_group, n_meth, n_coeff))
-
-for (i_meth in 1:n_meth){
-  for (jj in 1:n_coeff) {
-    for (ii in 1:n_group){
-      # print(paste('Posterior of', coeff_name[jj]))
-      mean_gibbs[ii, i_meth, jj] = mean(coeff[jj, index_good, ii, , i_meth])
-      cat('\n', mean(coeff[jj, index_good, ii, , i_meth]))
+plot_density = function(coeff, coeff_name) {
+  for (i_meth in 1:n_meth) {
+    for (i_coeff in 1:length(coeff_name)){
+      par(mfrow=c(2, ceiling(n_group/2)))
+      for (i_group in 1:n_group){
+        for(i_chain in 1:n_chain){
+          if (i_chain==1){
+            plot(density(coeff[i_coeff, index_good, i_group,i_chain, i_meth]), type='l', main = '',
+                 xlab=paste(coeff_name[i_coeff],i_group), ylab='Density', col=plot_colors[i_chain])
+          } else{
+            lines(density(coeff[i_coeff, index_good, i_group,i_chain, i_meth]), main = '',
+                  xlab=paste(coeff_name[i_coeff],i_group), ylab='Density', col=plot_colors[i_chain])
+          }
+        }
+      }
+      legend("bottom", legend=legend_names, col=plot_colors, lwd=1.0,
+             cex=1.0, bty='n', xpd = NA, horiz = T, inset = c(0,-0.5))
     }
-    # mtext(paste('Posterior of', coeff_name[jj]), outer=TRUE,  cex=1, line=-0.5)
   }
 }
 
- 
-# hyper_param_name = c('mu','sigma')
-# for (i_meth in 1:n_meth){
-#   for (jj in 1:length(hyper_param_name)){
-#     par(mfrow=c(ceiling(n_coeff/2),2))
-#     for (i_coeff in 1:n_coeff){
-#       for(i_chain in 1:n_chain){
-#         if (i_chain==1){
-#           plot(index_good, hyper_param[i_coeff, index_good, jj, i_chain, i_meth],
-#                ylab = paste(hyper_param_name[jj], i_coeff), xlab='', col=plot_colors[i_chain])
-#         } else {
-#           lines(index_good, hyper_param[i_coeff, index_good, jj, i_chain, i_meth],
-#                 ylab = paste(hyper_param_name[jj], i_coeff), xlab='', col=plot_colors[i_chain])
-#         }
-#       }
-#       # mtext(0.5,0.55,paste('Posterior of', hyper_param_name[jj]), outer=TRUE,  cex=1, line=-0.5)
-#       # print(mean(hyper_param[, index_good, jj, , i_meth]))
-#     }
-#     legend("bottom", legend=legend_names, col=plot_colors, lwd=1.0, 
-#            cex=1.0, bty='n', xpd =NA, horiz=T, inset=c(0,-0.5)) 
-#   }
-# }
+

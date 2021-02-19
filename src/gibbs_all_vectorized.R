@@ -157,16 +157,6 @@ mh_draw = function(coeff_curr, coeff_curr_id, hyper_param_curr, targ_dens_mh=log
   return(coeff_curr)
 }
 
-# # not run:
-# coeff_curr = coeff[, 1, , i_chain, i_meth]
-# coeff_curr_id = 1
-# hyper_param_curr = hyper_param[, 1, , i_chain, i_meth]
-# targ_dens_mh = log_post_orig
-# targ_dens = log_post_orig
-# prop_mh = dens_fun_list[[1]]
-# prop_fun = dens_fun_list[[1]]
-# # end of not run
-
 gibbs_with_mh = function(coeff_curr, hyper_param_curr, targ_dens, prop_fun){
   
   # update hyperpriors

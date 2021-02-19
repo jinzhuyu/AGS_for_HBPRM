@@ -42,19 +42,4 @@ model {
   target += poisson_log_lpmf(y|rows_dot_product(rep_mat_rows(coeff, len_each_group), X));
 }
 
-// Note: the following code works as well but less efficient due to the for loop that iterates though every data point
-// transformed parameters {
-//   vector[n_data] log_lambda;
-//   for (i in 1:n_data) {
-//     log_lambda[i] = dot_product(coeff[, group_id[i]], X[i, ]);
-//   }
-// }
-
-// Note: for use if y_pred is needed.
-//generated quantities {
-// real <lower=1> y_hat[I_new*n_group_new];
-//  for (ij in 1:(I_new*n_group_new)) {
-//    yhat[ij] = ;
-//  }
-//}
 

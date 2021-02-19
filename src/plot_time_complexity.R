@@ -43,25 +43,25 @@ plot_scalability = function(df_select, lgd_x, lgd_y_vec,save_fig_title){
 
 # real data
 # import data
-data = read.csv("C:/GitHub/approx_gibbs_for_HBM/test_data/scalability_real_data.csv", header = T)
+data = read.csv("../results/scalability_real_data.csv", header = T)
 
 df_select = data[,c(2,6,7)]
 
 # define plot parameters
 lgd_x = 16950
 lgd_y_vec = c(110,615)
-save_fig_title = "C:/GitHub/approx_gibbs_for_HBM/manuscript_preparation/scalability_real_data.pdf"
+save_fig_title = "../results/scalability_real_data.pdf"
 plot_scalability(df_select, lgd_x, lgd_y_vec, save_fig_title)
 
 
 # simualted data
 # import data
-data = read.csv("C:/GitHub/approx_gibbs_for_HBM/test_data/scalability_simulated_data.csv", header = T)
+data = read.csv("../results/scalability_simulated_data.csv", header = T)
 df_select = data[,c(2,7,8)]
 
 # define plot parameters
 lgd_x = 3900
 lgd_y_vec = c(12,77)
-save_fig_title = "C:/GitHub/approx_gibbs_for_HBM/manuscript_preparation/scalability_simulated_data.pdf"
+save_fig_title = "../results/scalability_simulated_data.pdf"
 plot_scalability(df_select, lgd_x, lgd_y_vec, save_fig_title)
 

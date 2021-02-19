@@ -7,22 +7,13 @@
 data_list = read.csv("C:/GitHub/approx_gibbs_for_HBM/test_data/covid19_test_data/covid19_data_raw.csv", header = T)
 
 # select useful columns
-data_list = data_list[, c(1,3,6,7)]    #4:9]
-
-# day = day + 6. Exposeure is assume 5 days before.
-# The model used in the paper has log(t) term, so I believe t should be greater than 0.
+data_list = data_list[, c(1,3,6,7)] 
 t_exp_before = 5+1
 data_list[,2] = data_list[,2]+t_exp_before
 
 # remove rows with zero positive cases
 test_pos = data_list[, 4]
 data_list_new = data_list[which(!test_pos == 0),]
-# remove both zero and ones in response variable
-# data_list_new = data_list[which(!test_pos==0&!test_pos==1),]
-# note: n_data_orig = 380, n_zero = 81, n_ones = 48. Percentage of removed entries = 34%
-
-# increase the small counts to check if the R2 and RMSE metrics get better
-# data_list_new$test_pos[data_list_new$test_pos<5] = 5
 
 # add a group-level covariate~norm(0,1)
 # find group id
@@ -64,15 +55,6 @@ group_attr_id = n_cov
 n_group = max(group_id)
 len_each_group = find_len_each_group(data_list_select, group_attr_id, n_data, n_group)
 
-# # normalize group_level covariates
-# for (j in 1:n_group){
-#   if (j==1){
-#     row_index = seq(1, sum(len_each_group[1:j]), by=1)
-#   }else{
-#     row_index = seq((sum(len_each_group[1:(j-1)])+1), sum(len_each_group[1:j]), by=1)
-#   }
-#   data_list_select[row_index,n_cov] = min_max(data_list_select[row_index, n_cov])
-# }
 # normalize individual level covariates
 for (i in 1:(n_cov-1)){
   data_list_select[,i] = min_max(data_list_select[,i])
@@ -81,8 +63,8 @@ for (i in 1:(n_cov-1)){
 data_all = prepare_data(data_list_select, group_attr_id)
 
 # # sampling parameters
-n_keep = 8000L
-n_warmup = 4000L
+n_keep = 10000L
+n_warmup = 5000L
 n_chain = 4L
 
 # fit model
@@ -101,4 +83,5 @@ index_good <<- (n_warmup+1):(n_warmup+n_keep)
 
 # value of performance metrics
 metric_all = cal_metric(stan_fit, gibbs_fit, y, print_out=1)
+
 metric_all
