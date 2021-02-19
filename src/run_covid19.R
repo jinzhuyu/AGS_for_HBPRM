@@ -4,7 +4,7 @@
 ################
 ## import and adapt data
 # import data
-data_list = read.csv("C:/GitHub/approx_gibbs_for_HBM/test_data/covid19_test_data/covid19_data_raw.csv", header = T)
+data_list = read.csv("../test_data/covid19_test_data/covid19_data_raw.csv", header = T)
 
 # select useful columns
 data_list = data_list[, c(1,3,6,7)] 
